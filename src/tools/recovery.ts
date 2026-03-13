@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createClient } from "./helpers";
+import { createClient, formatDate } from "./helpers";
 
 export function registerRecoveryTools(server: McpServer) {
   server.registerTool(
@@ -52,10 +52,10 @@ export function registerRecoveryTools(server: McpServer) {
           if (!rec.score) continue;
           const s = rec.score;
           lines.push(
-            `Recovery: ${Math.round(s.recovery_score)}%`,
+            `${formatDate(rec.created_at)} — Recovery: ${Math.round(s.recovery_score)}%`,
             `  HRV (RMSSD): ${s.hrv_rmssd_milli.toFixed(1)} ms`,
             `  Resting HR: ${Math.round(s.resting_heart_rate)} bpm`,
-            ...(s.spo2_percentage != null ? [`  SpO2: ${s.spo2_percentage}%`] : []),
+            ...(s.spo2_percentage != null ? [`  SpO2: ${Math.round(s.spo2_percentage)}%`] : []),
             ...(s.skin_temp_celsius != null ? [`  Skin Temp: ${s.skin_temp_celsius.toFixed(1)}C`] : []),
             ...(s.user_calibrating ? ["  (Still calibrating)"] : []),
             ""

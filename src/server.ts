@@ -1,29 +1,21 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WhoopClient } from "./whoop-client";
-import { registerHomeTools } from "./tools/home";
-import { registerSleepTools } from "./tools/sleep";
+import { registerOverviewTool } from "./tools/overview";
+import { registerProfileTools } from "./tools/profile";
 import { registerRecoveryTools } from "./tools/recovery";
-import { registerStrainTools } from "./tools/strain";
-import { registerHealthspanTools } from "./tools/healthspan";
+import { registerSleepTools } from "./tools/sleep";
+import { registerWorkoutTools } from "./tools/workouts";
 
-export interface WhoopMcpServerConfig {
-  email?: string;
-  password?: string;
-}
-
-export function createWhoopMcpServer(config: WhoopMcpServerConfig) {
+export function createWhoopMcpServer() {
   const server = new McpServer({
     name: "whoop-mcp-server",
-    version: "1.0.0",
+    version: "2.0.0",
   });
 
-  const whoopClient = new WhoopClient(config);
-
-  registerHomeTools(server, whoopClient);
-  registerSleepTools(server, whoopClient);
-  registerRecoveryTools(server, whoopClient);
-  registerStrainTools(server, whoopClient);
-  registerHealthspanTools(server, whoopClient);
+  registerOverviewTool(server);
+  registerProfileTools(server);
+  registerRecoveryTools(server);
+  registerSleepTools(server);
+  registerWorkoutTools(server);
 
   return server;
 }

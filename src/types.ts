@@ -1,400 +1,150 @@
-export interface WhoopConfig {
-  email?: string;
-  password?: string;
-  baseUrl?: string;
-  userId?: string;
-  accountId?: string;
+// OAuth token data
+export interface OAuthTokenData {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  scope: string;
 }
 
-export interface AuthenticationResult {
-  AccessToken: string;
-  ExpiresIn: number;
-  TokenType: string;
-  RefreshToken: string;
-  IdToken: string;
-  NewDeviceMetadata: null;
+// OAuth token response from Whoop
+export interface OAuthTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+  scope: string;
 }
 
-export interface LoginResponse {
-  ChallengeName: null;
-  Session: null;
-  ChallengeParameters: Record<string, unknown>;
-  AuthenticationResult: AuthenticationResult;
-  AvailableChallenges: null;
+// Developer API v2 response types
+
+export interface WhoopProfile {
+  user_id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
 }
 
-export interface TokenData {
-  accessToken: string;
-  expiresAt: number;
+export interface WhoopBodyMeasurement {
+  height_meter: number;
+  weight_kilogram: number;
+  max_heart_rate: number;
 }
 
-export interface WhoopHeaders {
-  Host: string;
-  Authorization: string;
-  Accept: string;
-  "User-Agent": string;
-  "Content-Type": string;
-  "X-WHOOP-Device-Platform"?: string;
-  "X-WHOOP-Time-Zone"?: string;
-  Locale?: string;
-  Currency?: string;
-  [key: string]: string | undefined;
+export interface CycleScore {
+  strain: number;
+  kilojoule: number;
+  average_heart_rate: number;
+  max_heart_rate: number;
 }
 
-export interface TimeInterval {
-  lower_endpoint: string;
-  lower_bound_type: string;
-  upper_endpoint?: string;
-  upper_bound_type?: string;
+export interface WhoopCycle {
+  id: number;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  start: string;
+  end?: string;
+  timezone_offset: string;
+  score_state: "SCORED" | "PENDING_SCORE" | "UNSCORABLE";
+  score?: CycleScore;
 }
 
-export interface CycleMetadata {
-  cycle_id: number;
-  cycle_day: string;
-  cycle_days: TimeInterval;
-  during: TimeInterval;
-  cycle_date_display: string;
-  previous_cycle_day: string;
-  next_cycle_day: string;
-  multi_day_cycle: boolean;
-  has_multi_day_cycle_cta_tile: boolean;
-  sleep_state: string;
-  day_zero: boolean;
-}
-
-export interface JournalMetadata {
-  journal_completed: boolean;
-  has_recovery: boolean;
-  has_cycle: boolean;
-  journal_enabled: boolean;
-  display_cycle_state: string;
-  should_auto_pop: boolean;
-  previous_cycle_during: TimeInterval;
-  has_enough_recoveries: boolean;
-}
-
-export interface UserMetadata {
-  avatar_url: string;
-  profile_raf_destination: string | null;
-}
-
-export interface WhoopLiveMetadata {
-  day_strain: number;
+export interface RecoveryScore {
+  user_calibrating: boolean;
   recovery_score: number;
-  ms_of_sleep: number;
-  calories: number;
+  resting_heart_rate: number;
+  hrv_rmssd_milli: number;
+  spo2_percentage?: number;
+  skin_temp_celsius?: number;
 }
 
-export interface Activity {
-  title: string;
-  score_display: string;
-  start_time_text: string;
-  end_time_text: string;
-  icon_url: string;
-  secondary_icon_url: string | null;
-  status: string;
-  type: string;
-  activity_v2_id: string;
-  sport_id: number;
-  internal_name: string;
-  during: TimeInterval;
-  detected_activity_metadata: any | null;
-  destination: any;
+export interface WhoopRecovery {
+  cycle_id: number;
+  sleep_id: string;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  score_state: "SCORED" | "PENDING_SCORE" | "UNSCORABLE";
+  score?: RecoveryScore;
 }
 
-export interface KeyStatistic {
-  trend_key: string;
-  title: string;
-  current_value_display: string;
-  thirty_day_value_display: string;
-  state: string;
-  icon: string;
-  style: string;
+export interface SleepStageSummary {
+  total_in_bed_time_milli: number;
+  total_awake_time_milli: number;
+  total_no_data_time_milli: number;
+  total_light_sleep_time_milli: number;
+  total_slow_wave_sleep_time_milli: number;
+  total_rem_sleep_time_milli: number;
+  sleep_cycle_count: number;
+  disturbance_count: number;
 }
 
-export interface Gauge {
-  title: string;
-  title_end_icon: string;
-  destination: any;
+export interface SleepNeeded {
+  baseline_milli: number;
+  need_from_sleep_debt_milli: number;
+  need_from_recent_strain_milli: number;
+  need_from_recent_nap_milli: number;
+}
+
+export interface SleepScore {
+  stage_summary: SleepStageSummary;
+  sleep_needed: SleepNeeded;
+  respiratory_rate?: number;
+  sleep_performance_percentage?: number;
+  sleep_consistency_percentage?: number;
+  sleep_efficiency_percentage?: number;
+}
+
+export interface WhoopSleep {
   id: string;
-  score_display: string;
-  score_display_style: string;
-  score_display_suffix: string | null;
-  gauge_fill_percentage: number;
-  score_target: number | null;
-  lower_optimal_percentage: number | null;
-  higher_optimal_percentage: number | null;
-  progress_fill_style: string;
-  bar_styles: any | null;
+  cycle_id: number;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  start: string;
+  end: string;
+  timezone_offset: string;
+  nap: boolean;
+  score_state: "SCORED" | "PENDING_SCORE" | "UNSCORABLE";
+  score?: SleepScore;
 }
 
-export interface HomeMetadata {
-  cycle_metadata: CycleMetadata;
-  journal_metadata: JournalMetadata;
-  user_metadata: UserMetadata;
-  whoop_live_metadata: WhoopLiveMetadata;
-  autopop_metadata: any;
-  ai_context_metadata: any;
-  experiment_ids: any[];
+export interface ZoneDurations {
+  zone_zero_milli: number;
+  zone_one_milli: number;
+  zone_two_milli: number;
+  zone_three_milli: number;
+  zone_four_milli: number;
+  zone_five_milli: number;
 }
 
-export interface HomeResponse {
-  metadata: HomeMetadata;
-  fab_menu: any | null;
-  header: {
-    content: {
-      id: string;
-      gauges: Gauge[];
-      header_item: any | null;
-    };
-    type: string;
-  };
-  pillars: any[];
-  day_one_transition: any | null;
+export interface WorkoutScore {
+  strain: number;
+  average_heart_rate: number;
+  max_heart_rate: number;
+  kilojoule: number;
+  percent_recorded: number;
+  distance_meter?: number;
+  altitude_gain_meter?: number;
+  altitude_change_meter?: number;
+  zone_durations: ZoneDurations;
 }
 
-export interface RecoveryMetric {
+export interface WhoopWorkout {
   id: string;
-  icon: string;
-  title: string;
-  status: string;
-  status_subtitle: string;
-  metric_style: string;
-  status_icon: string;
-  status_type: string;
-  destination: any;
-  bar_styles: any | null;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  start: string;
+  end: string;
+  timezone_offset: string;
+  sport_name: string;
+  score_state: "SCORED" | "PENDING_SCORE" | "UNSCORABLE";
+  score?: WorkoutScore;
+  sport_id?: number;
 }
 
-export interface RecoveryScoreGauge {
-  title_image_url: string | null;
-  score_display_title: string;
-  destination: any;
-  id: string;
-  score_display: string;
-  score_display_style: string | null;
-  score_display_suffix: string;
-  gauge_fill_percentage: number;
-  score_target: number | null;
-  lower_optimal_percentage: number | null;
-  higher_optimal_percentage: number | null;
-  progress_fill_style: string;
-  bar_styles: any | null;
-}
-
-export interface RecoveryContributorsTile {
-  id: string;
-  metrics: RecoveryMetric[];
-  legend: any | null;
-  tile_legend: {
-    type: string;
-    content: {
-      title: string;
-      subtitle: string;
-      icons: Array<{
-        icon: string;
-        type: string;
-      }>;
-    };
-  };
-  footer: {
-    items: Array<{
-      type: string;
-      content: {
-        header: string | null;
-        style: string;
-        vow: string;
-        icon: string | null;
-        entrypoint: {
-          entry_text: string;
-          signature: string;
-        };
-        destination: any;
-      };
-    }>;
-  };
-}
-
-export interface RecoveryDeepDiveHeader {
-  title: string;
-  end_icon: string;
-  deep_dive_score_type: string;
-  destination: any;
-}
-
-export interface RecoveryDeepDiveSection {
-  items: Array<{
-    type: string;
-    content: RecoveryScoreGauge | RecoveryContributorsTile | { path: string };
-  }>;
-  id: string | null;
-  section_type: string;
-}
-
-export interface RecoveryDeepDiveResponse {
-  metadata: {
-    ai_context_metadata: {
-      is_wce_enabled: boolean;
-      destination: any;
-    };
-  };
-  header: RecoveryDeepDiveHeader;
-  sections: RecoveryDeepDiveSection[];
-}
-
-export interface StrainMetric {
-  id: string;
-  icon: string;
-  title: string;
-  status: string;
-  status_subtitle: string;
-  metric_style: string;
-  status_icon: string;
-  status_type: string;
-  destination: any;
-  bar_styles: any | null;
-}
-
-export interface StrainScoreGauge {
-  title_image_url: string | null;
-  score_display_title: string;
-  destination: any;
-  id: string;
-  score_display: string;
-  score_display_style: string | null;
-  score_display_suffix: string | null;
-  gauge_fill_percentage: number;
-  score_target: number | null;
-  lower_optimal_percentage: number | null;
-  higher_optimal_percentage: number | null;
-  progress_fill_style: string;
-  bar_styles: any | null;
-}
-
-export interface StrainContributorsTile {
-  id: string;
-  metrics: StrainMetric[];
-  legend: any | null;
-  tile_legend: {
-    type: string;
-    content: {
-      title: string;
-      subtitle: string;
-      icons: Array<{
-        icon: string;
-        type: string;
-      }>;
-    };
-  };
-  footer: {
-    items: Array<{
-      type: string;
-      content: {
-        header: string | null;
-        style: string;
-        vow: string;
-        icon: string | null;
-        entrypoint: {
-          entry_text: string;
-          signature: string;
-        };
-        destination: any;
-      };
-    }>;
-  };
-}
-
-export interface StrainActivity {
-  title: string;
-  score_display: string;
-  start_time_text: string;
-  end_time_text: string;
-  icon_url: string;
-  secondary_icon_url: string | null;
-  status: string;
-  type: string;
-  activity_v2_id: string;
-  sport_id: number;
-  internal_name: string;
-  during: TimeInterval;
-  detected_activity_metadata: any | null;
-  destination: any;
-}
-
-export interface StrainDeepDiveHeader {
-  title: string;
-  end_icon: string;
-  deep_dive_score_type: string;
-  destination: any;
-}
-
-export interface StrainDeepDiveSection {
-  items: Array<{
-    type: string;
-    content:
-      | StrainScoreGauge
-      | StrainContributorsTile
-      | StrainActivity
-      | { path: string }
-      | any;
-  }>;
-  id: string | null;
-  section_type: string;
-}
-
-export interface StrainDeepDiveResponse {
-  metadata: {
-    ai_context_metadata: {
-      is_wce_enabled: boolean;
-      destination: any;
-    };
-  };
-  header: StrainDeepDiveHeader;
-  sections: StrainDeepDiveSection[];
-}
-
-export interface HealthspanAmoeba {
-  style_values: {
-    age: number;
-    pace_of_aging: number;
-    years_difference: number;
-    years_difference_animation_score: number;
-    pace_of_aging_animation_score: number;
-  };
-  age_value_display: string;
-  age_title_display: string;
-  age_subtitle_display: string;
-  age_subtitle_style: string;
-  years_difference_value_display: string;
-  years_difference_value_style: string;
-  years_difference_subtitle_display: string;
-  pace_of_aging_display: string;
-  pace_of_aging_subtitle_display: string;
-  is_calibrating: boolean;
-}
-
-export interface HealthspanDatePicker {
-  current_date_range_display: string;
-  next_date_time: string | null;
-  previous_date_time: string;
-}
-
-export interface HealthspanUnlockedContent {
-  date_picker: HealthspanDatePicker;
-  is_calibrating: boolean;
-  whoop_age_amoeba: HealthspanAmoeba;
-  previous_whoop_age_amoeba: HealthspanAmoeba;
-}
-
-export interface HealthspanResponse {
-  metadata: {
-    ai_context_metadata: {
-      is_wce_enabled: boolean;
-      destination: any;
-    };
-  };
-  navigation_title: string;
-  navigation_subtitle: string;
-  navigation_destination: any;
-  unlocked_content: HealthspanUnlockedContent;
+export interface PaginatedResponse<T> {
+  records: T[];
+  next_token?: string;
 }

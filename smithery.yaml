@@ -4,25 +4,14 @@ startCommand:
   type: "http"
   configSchema:
     type: "object"
-    required: ["whoopEmail", "whoopPassword"]
+    required: []
     properties:
-      whoopEmail:
-        type: "string"
-        title: "Whoop Email"
-        description: "Your Whoop account email address"
-      whoopPassword:
-        type: "string"
-        title: "Whoop Password"
-        description: "Your Whoop account password"
-        format: "password"
       mcpAuthToken:
         type: "string"
         title: "MCP Auth Token"
         description: "Optional authentication token for securing MCP endpoint access"
         format: "password"
   exampleConfig:
-    whoopEmail: "user@example.com"
-    whoopPassword: "your-password"
     mcpAuthToken: "optional-secret-token"
 
 build:

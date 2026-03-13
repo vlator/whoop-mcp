@@ -13,13 +13,15 @@ RUN bun install --frozen-lockfile --production
 # Copy source code
 COPY . .
 
+# Create data directory for token persistence
+RUN mkdir -p /app/data
+
 # Expose the default port
 EXPOSE 3000
 
-# Health check
+# Health check against the landing page
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD bun run -e "fetch('http://localhost:' + (process.env.PORT || '3000')).catch(() => process.exit(1))"
+  CMD bun run -e "fetch('http://localhost:' + (process.env.PORT || '3000') + '/').then(r => r.ok || process.exit(1)).catch(() => process.exit(1))"
 
 # Run the application
 CMD ["bun", "run", "index.ts"]
-

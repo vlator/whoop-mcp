@@ -9,7 +9,7 @@ import type {
   PaginatedResponse,
 } from "./types";
 
-const BASE_URL = "https://api.prod.whoop.com/v2";
+const BASE_URL = "https://api.prod.whoop.com/developer/v2";
 const TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
 
 export class WhoopClient {

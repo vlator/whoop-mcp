@@ -160,7 +160,7 @@ app.get("/auth/whoop/callback", async (req, res) => {
     let whoopUserId: number | undefined;
     try {
       const profileResponse = await fetch(
-        "https://api.prod.whoop.com/v2/user/profile/basic",
+        "https://api.prod.whoop.com/developer/v2/user/profile/basic",
         { headers: { Authorization: `Bearer ${tokens.access_token}` } }
       );
       if (profileResponse.ok) {

@@ -1,146 +1,74 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WhoopClient } from "../whoop-client";
+import { createClient } from "./helpers";
 
-export function registerRecoveryTools(
-  server: McpServer,
-  whoopClient: WhoopClient
-) {
+export function registerRecoveryTools(server: McpServer) {
   server.registerTool(
-    "whoop_get_recovery",
+    "get_whoop_recovery",
     {
-      title: "Get Whoop Recovery Deep Dive",
+      title: "Get Whoop Recovery",
       description:
-        "Get comprehensive recovery analysis including recovery score, HRV, RHR, respiratory rate, sleep performance, and recovery contributors with trends",
+        "Get recovery data including recovery score, HRV, resting heart rate, SpO2, and skin temperature",
       inputSchema: {
-        date: z
+        start_date: z
           .string()
           .optional()
-          .describe(
-            "Date in YYYY-MM-DD format (defaults to today if not provided)"
-          ),
-      },
-      outputSchema: {
-        title: z.string(),
-        recoveryScore: z.object({
-          score: z.string(),
-          percentage: z.number(),
-          style: z.string(),
-        }),
-        contributors: z.array(
-          z.object({
-            id: z.string(),
-            title: z.string(),
-            value: z.string(),
-            baseline: z.string(),
-            status: z.string(),
-            icon: z.string(),
-          })
-        ),
-        coachInsight: z.string().nullable(),
+          .describe("Start date in YYYY-MM-DD format (defaults to last 7 days)"),
+        end_date: z
+          .string()
+          .optional()
+          .describe("End date in YYYY-MM-DD format (defaults to today)"),
+        limit: z
+          .number()
+          .min(1)
+          .max(25)
+          .optional()
+          .describe("Max records to return (default 7)"),
       },
     },
-    async ({ date }) => {
+    async ({ start_date, end_date, limit }) => {
       try {
-        const data = await whoopClient.getRecoveryDeepDive(date);
+        const client = createClient();
 
-        const scoreSection = data.sections.find((s: any) =>
-          s.items.some((i: any) => i.type === "SCORE_GAUGE")
+        const defaultStart = new Date();
+        defaultStart.setDate(defaultStart.getDate() - 7);
+        const startStr = start_date || defaultStart.toISOString().split("T")[0];
+
+        const records = await client.getRecovery(
+          startStr,
+          end_date,
+          limit || 7
         );
-        const scoreGauge = scoreSection?.items.find(
-          (i: any) => i.type === "SCORE_GAUGE"
-        )?.content;
 
-        const contributorsSection = data.sections.find((s: any) =>
-          s.items.some((i: any) => i.type === "CONTRIBUTORS_TILE")
-        );
-        const contributorsTile = contributorsSection?.items.find(
-          (i: any) => i.type === "CONTRIBUTORS_TILE"
-        )?.content;
+        if (records.length === 0) {
+          return {
+            content: [{ type: "text", text: "No recovery data found for this period." }],
+          };
+        }
 
-        const contributors =
-          contributorsTile?.metrics.map((metric: any) => ({
-            id: metric.id,
-            title: metric.title,
-            value: metric.status,
-            baseline: metric.status_subtitle,
-            status: metric.status_type,
-            icon: metric.icon,
-          })) || [];
+        const lines = ["Recovery data:", ""];
 
-        const coachInsight =
-          contributorsTile?.footer?.items?.find(
-            (i: any) => i.type === "WHOOP_COACH_VOW"
-          )?.content?.vow || null;
-
-        const output = {
-          title: data.header.title,
-          recoveryScore: {
-            score: scoreGauge?.score_display || "N/A",
-            percentage: scoreGauge?.gauge_fill_percentage || 0,
-            style: scoreGauge?.progress_fill_style || "UNKNOWN",
-          },
-          contributors,
-          coachInsight,
-        };
-
-        const lines = [
-          "💪 RECOVERY DEEP DIVE",
-          "═══════════════════",
-          "",
-          `📅 ${data.header.title}`,
-          "",
-          "🎯 RECOVERY SCORE",
-          "─────────────────",
-          `  ${output.recoveryScore.score}% (${output.recoveryScore.style.replace(/_/g, " ")})`,
-          "",
-          "📊 CONTRIBUTORS",
-          "───────────────",
-        ];
-
-        contributors.forEach((contributor: any) => {
-          const statusEmoji =
-            contributor.status === "HIGHER_POSITIVE"
-              ? "📈"
-              : contributor.status === "LOWER_POSITIVE"
-                ? "📉"
-                : contributor.status === "HIGHER_NEGATIVE"
-                  ? "⬆️"
-                  : contributor.status === "LOWER_NEGATIVE"
-                    ? "⬇️"
-                    : "➡️";
-
+        for (const rec of records) {
+          if (!rec.score) continue;
+          const s = rec.score;
           lines.push(
-            `  ${statusEmoji} ${contributor.title}`,
-            `     Current: ${contributor.value}`,
-            `     Baseline (30-day): ${contributor.baseline}`,
-            ""
-          );
-        });
-
-        if (output.coachInsight) {
-          lines.push(
-            "💡 COACH INSIGHT",
-            "───────────────",
-            output.coachInsight,
+            `Recovery: ${Math.round(s.recovery_score)}%`,
+            `  HRV (RMSSD): ${s.hrv_rmssd_milli.toFixed(1)} ms`,
+            `  Resting HR: ${Math.round(s.resting_heart_rate)} bpm`,
+            ...(s.spo2_percentage != null ? [`  SpO2: ${s.spo2_percentage}%`] : []),
+            ...(s.skin_temp_celsius != null ? [`  Skin Temp: ${s.skin_temp_celsius.toFixed(1)}C`] : []),
+            ...(s.user_calibrating ? ["  (Still calibrating)"] : []),
             ""
           );
         }
 
-        const formattedText = lines.join("\n");
-
-        return {
-          content: [{ type: "text", text: formattedText }],
-          structuredContent: output,
-        };
+        return { content: [{ type: "text", text: lines.join("\n") }] };
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
         return {
           content: [
             {
               type: "text",
-              text: `Error fetching Whoop recovery data: ${errorMessage}`,
+              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
             },
           ],
           isError: true,

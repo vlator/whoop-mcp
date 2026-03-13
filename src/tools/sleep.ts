@@ -1,95 +1,99 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WhoopClient } from "../whoop-client";
+import { createClient, msToHoursMinutes, formatDate } from "./helpers";
 
-export function registerSleepTools(
-  server: McpServer,
-  whoopClient: WhoopClient
-) {
+export function registerSleepTools(server: McpServer) {
   server.registerTool(
-    "whoop_get_sleep",
+    "get_whoop_sleep",
     {
-      title: "Get Sleep Deep Dive",
+      title: "Get Whoop Sleep",
       description:
-        "Get detailed sleep data including sleep performance score, contributors (hours vs needed, consistency, efficiency, sleep stress), and insights for a specific date",
+        "Get sleep data including performance, efficiency, consistency, sleep stages, respiratory rate, and disturbances",
       inputSchema: {
-        date: z
+        start_date: z
           .string()
           .optional()
-          .describe(
-            "Date in YYYY-MM-DD format (defaults to today if not provided)"
-          ),
+          .describe("Start date in YYYY-MM-DD format (defaults to last 7 days)"),
+        end_date: z
+          .string()
+          .optional()
+          .describe("End date in YYYY-MM-DD format (defaults to today)"),
+        limit: z
+          .number()
+          .min(1)
+          .max(25)
+          .optional()
+          .describe("Max records to return (default 7)"),
       },
     },
-    async ({ date }) => {
+    async ({ start_date, end_date, limit }) => {
       try {
-        const data = await whoopClient.getSleepDeepDive(date);
+        const client = createClient();
 
-        const scoreSection = data.sections.find((s: any) =>
-          s.items.some((i: any) => i.type === "SCORE_GAUGE")
-        );
+        const defaultStart = new Date();
+        defaultStart.setDate(defaultStart.getDate() - 7);
+        const startStr = start_date || defaultStart.toISOString().split("T")[0];
 
-        const scoreGauge = scoreSection?.items.find(
-          (i: any) => i.type === "SCORE_GAUGE"
-        );
+        const records = await client.getSleep(startStr, end_date, limit || 7);
 
-        let sleepPerformance = null;
-        if (scoreGauge) {
-          sleepPerformance = {
-            score: Math.round(scoreGauge.content.gauge_fill_percentage * 100),
-            scoreDisplay: scoreGauge.content.score_display,
-            fillPercentage: scoreGauge.content.gauge_fill_percentage,
+        if (records.length === 0) {
+          return {
+            content: [{ type: "text", text: "No sleep data found for this period." }],
           };
         }
 
-        const contributorsSection = data.sections.find((s: any) =>
-          s.items.some((i: any) => i.type === "CONTRIBUTORS_TILE")
-        );
+        const lines = ["Sleep data:", ""];
 
-        const contributorsTile = contributorsSection?.items.find(
-          (i: any) => i.type === "CONTRIBUTORS_TILE"
-        );
+        for (const rec of records) {
+          if (!rec.score) continue;
+          const s = rec.score;
+          const stages = s.stage_summary;
+          const needed = s.sleep_needed;
 
-        const contributors =
-          contributorsTile?.content.metrics.map((m: any) => ({
-            id: m.id,
-            icon: m.icon,
-            title: m.title,
-            status: m.status,
-            statusSubtitle: m.status_subtitle,
-            metricStyle: m.metric_style,
-          })) || [];
+          const totalSleep =
+            stages.total_light_sleep_time_milli +
+            stages.total_slow_wave_sleep_time_milli +
+            stages.total_rem_sleep_time_milli;
 
-        let insight = undefined;
-        const vowItem = contributorsTile?.content.footer?.items?.find(
-          (i: any) => i.type === "WHOOP_COACH_VOW"
-        );
-        if (vowItem) {
-          insight = vowItem.content.vow;
+          const totalNeeded =
+            needed.baseline_milli +
+            needed.need_from_sleep_debt_milli +
+            needed.need_from_recent_strain_milli +
+            needed.need_from_recent_nap_milli;
+
+          lines.push(
+            `${formatDate(rec.start)}${rec.nap ? " (Nap)" : ""}`,
+            ...(s.sleep_performance_percentage != null
+              ? [`  Performance: ${Math.round(s.sleep_performance_percentage)}%`]
+              : []),
+            `  Total Sleep: ${msToHoursMinutes(totalSleep)} (needed: ${msToHoursMinutes(totalNeeded)})`,
+            `  In Bed: ${msToHoursMinutes(stages.total_in_bed_time_milli)}`,
+            ...(s.sleep_efficiency_percentage != null
+              ? [`  Efficiency: ${Math.round(s.sleep_efficiency_percentage)}%`]
+              : []),
+            ...(s.sleep_consistency_percentage != null
+              ? [`  Consistency: ${Math.round(s.sleep_consistency_percentage)}%`]
+              : []),
+            `  Stages:`,
+            `    Light: ${msToHoursMinutes(stages.total_light_sleep_time_milli)}`,
+            `    Deep (SWS): ${msToHoursMinutes(stages.total_slow_wave_sleep_time_milli)}`,
+            `    REM: ${msToHoursMinutes(stages.total_rem_sleep_time_milli)}`,
+            `    Awake: ${msToHoursMinutes(stages.total_awake_time_milli)}`,
+            `  Cycles: ${stages.sleep_cycle_count} | Disturbances: ${stages.disturbance_count}`,
+            ...(s.respiratory_rate != null
+              ? [`  Respiratory Rate: ${s.respiratory_rate.toFixed(1)} breaths/min`]
+              : []),
+            ""
+          );
         }
 
-        const result = {
-          sleepPerformance,
-          contributors,
-          insight,
-        };
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
+        return { content: [{ type: "text", text: lines.join("\n") }] };
       } catch (error) {
-        const errorMessage = `Error fetching sleep data: ${error instanceof Error ? error.message : "Unknown error"}`;
-
         return {
           content: [
             {
               type: "text",
-              text: errorMessage,
+              text: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
             },
           ],
           isError: true,

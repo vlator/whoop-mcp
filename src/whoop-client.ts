@@ -45,6 +45,8 @@ export class WhoopClient {
     });
 
     if (!response.ok) {
+      const body = await response.text();
+      console.error(`[whoop] Token refresh failed: ${response.status}`, body);
       throw new Error(
         `Token refresh failed: ${response.status} ${response.statusText}`
       );
@@ -64,6 +66,7 @@ export class WhoopClient {
       scope: data.scope,
     };
 
+    console.log(`[whoop] Token refreshed, expires in ${data.expires_in}s`);
     this.onTokenRefresh(this.tokens);
   }
 
@@ -87,6 +90,7 @@ export class WhoopClient {
       }
     }
 
+    console.log(`[whoop] GET ${path}`);
     const response = await fetch(url.toString(), {
       headers: {
         Authorization: `Bearer ${this.tokens.access_token}`,
@@ -94,6 +98,7 @@ export class WhoopClient {
     });
 
     if (response.status === 401) {
+      console.log(`[whoop] 401 on ${path}, refreshing token`);
       await this.refreshToken();
       const retryResponse = await fetch(url.toString(), {
         headers: {
@@ -101,6 +106,7 @@ export class WhoopClient {
         },
       });
       if (!retryResponse.ok) {
+        console.error(`[whoop] Retry failed: ${retryResponse.status} ${path}`);
         throw new Error(
           `Whoop API error: ${retryResponse.status} ${retryResponse.statusText}`
         );
@@ -109,6 +115,7 @@ export class WhoopClient {
     }
 
     if (!response.ok) {
+      console.error(`[whoop] Error: ${response.status} ${path}`);
       throw new Error(
         `Whoop API error: ${response.status} ${response.statusText}`
       );

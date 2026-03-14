@@ -76,6 +76,7 @@ app.get("/", (_req, res) => {
 
 // OAuth initiation
 app.get("/auth/whoop", (_req, res) => {
+  console.log("[oauth] Starting OAuth flow");
   const clientId = process.env.WHOOP_CLIENT_ID;
   if (!clientId) {
     return res.status(500).send("WHOOP_CLIENT_ID not configured");
@@ -174,6 +175,7 @@ app.get("/auth/whoop/callback", async (req, res) => {
     }
 
     setAuth(tokens, whoopUserId);
+    console.log(`[oauth] Account connected successfully, user_id: ${whoopUserId ?? "unknown"}`);
     res.redirect("/");
   } catch (error) {
     console.error("OAuth callback error:", error);
@@ -233,6 +235,9 @@ function verifyMcpAuth(
 
 // MCP endpoint — auth protected
 app.post("/mcp", verifyMcpAuth, async (req, res) => {
+  const method = req.body?.method;
+  const toolName = req.body?.params?.name;
+  console.log(`[mcp] ${method}${toolName ? ` → ${toolName}` : ""}`);
   const server = createWhoopMcpServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

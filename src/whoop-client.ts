@@ -15,6 +15,7 @@ const TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
 export class WhoopClient {
   private tokens: OAuthTokenData;
   private onTokenRefresh: (tokens: OAuthTokenData) => void;
+  private refreshPromise: Promise<void> | null = null;
 
   constructor(
     tokens: OAuthTokenData,
@@ -25,6 +26,20 @@ export class WhoopClient {
   }
 
   private async refreshToken(): Promise<void> {
+    // Deduplicate concurrent refresh calls — all callers share one in-flight refresh
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = this.doRefreshToken();
+    try {
+      await this.refreshPromise;
+    } finally {
+      this.refreshPromise = null;
+    }
+  }
+
+  private async doRefreshToken(): Promise<void> {
     const clientId = process.env.WHOOP_CLIENT_ID;
     const clientSecret = process.env.WHOOP_CLIENT_SECRET;
 
